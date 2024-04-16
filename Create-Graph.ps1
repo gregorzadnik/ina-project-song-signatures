@@ -4,7 +4,6 @@ $keysStr = "D flat major|D minor|E flat major|C minor|A minor|A major|G flat maj
 $keys = $keysStr.Split("|")
 foreach($comp in $data.composers){
     foreach($work in $comp.works){
-        $allWorks += 1
         foreach($key in $keys){
             if($work.title -match $key){
                 $work | Add-Member -MemberType NoteProperty -Name 'key' -Value $key -Force
@@ -34,14 +33,14 @@ foreach($node in $allNodesList){
     $allNodes.Add($node, $allNodes.Count+1)
 }
 foreach($work in $keyWorks){
-    $worksTable.Add("$($work.title)$($work.composer)", $allNodes.Count+$worksTable.Count+1)
+    $worksTable.Add("$($work.title)|$($work.composer)", $allNodes.Count+$worksTable.Count+1)
 }
 
 $edges = [System.Collections.ArrayList]@()
 foreach($work in $keyWorks){
     $keyID = $allNodes[$work.key]
     $composerID = $allNodes[$work.composer]
-    $workID = $worksTable["$($work.title)$($work.composer)"]
+    $workID = $worksTable["$($work.title)|$($work.composer)"]
     $periodID = $allNodes[$work.period]
     $genreID = $allNodes[$work.genre]
     $popularID = $allNodes[$work.popularity]
@@ -60,7 +59,7 @@ $allNodes.GetEnumerator() | Sort-Object Value | ForEach-Object {
     $lines.Add($str)
 }
 $worksTable.GetEnumerator() | Sort-Object Value | ForEach-Object {
-    $str = "$($_.Value) `"$($_.Name)`""
+    $str = "$($_.Value) `"$(($_.Name.split("|"))[0])`""
     $lines.Add($str)
 }
 $lines.Add("*arcs")
