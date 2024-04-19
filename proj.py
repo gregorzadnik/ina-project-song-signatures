@@ -18,7 +18,7 @@ def read(filepath):
     return G
 
 
-filepath = "works_labeled.net"
+filepath = "works.net"
 G = read(filepath)
 n = G.number_of_nodes()
 m = G.number_of_edges()

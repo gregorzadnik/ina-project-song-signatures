@@ -6,6 +6,9 @@ foreach($comp in $data.composers){
     foreach($work in $comp.works){
         foreach($key in $keys){
             if($work.title -match $key){
+                if($keyWorks.title -contains $work.title -and $keyWorks.composer -contains $comp.complete_name){
+                    break
+                }
                 $work | Add-Member -MemberType NoteProperty -Name 'key' -Value $key -Force
                 $work | Add-Member -MemberType NoteProperty -Name 'composer' -Value $comp.complete_name -Force
                 $work | Add-Member -MemberType NoteProperty -Name 'period' -Value $comp.epoch -Force
@@ -24,26 +27,26 @@ foreach($comp in $data.composers){
 
 $composers = $data.composers.complete_name
 $period = @("Medieval", "Renaissance", "Baroque", "Classical", "Early Romantic", "Romantic", "Late Romantic", "20th Century", "Post-War", "21st Century")
-$popular = @("Popular", "Nonpopular")
+$popularity = @("Popular", "Nonpopular")
 $genres = @("Chamber", "Keyboard", "Orchestral", "Stage", "Vocal")
-$allNodesList = $composers + $period + $popular + $genres + $keys
-$allNodes = @{}
+$allNodesList = $composers + $period + $popularity + $genres + $keys
+$allNodesTable = @{}
 $worksTable = @{}
 foreach($node in $allNodesList){
-    $allNodes.Add($node, $allNodes.Count+1)
+    $allNodesTable.Add($node, $allNodesTable.Count+1)
 }
 foreach($work in $keyWorks){
-    $worksTable.Add("$($work.title)|$($work.composer)", $allNodes.Count+$worksTable.Count+1)
+    $worksTable.Add("$($work.title)|$($work.composer)", $allNodesTable.Count+$worksTable.Count+1)
 }
 
 $edges = [System.Collections.ArrayList]@()
 foreach($work in $keyWorks){
-    $keyID = $allNodes[$work.key]
-    $composerID = $allNodes[$work.composer]
+    $keyID = $allNodesTable[$work.key]
+    $composerID = $allNodesTable[$work.composer]
     $workID = $worksTable["$($work.title)|$($work.composer)"]
-    $periodID = $allNodes[$work.period]
-    $genreID = $allNodes[$work.genre]
-    $popularID = $allNodes[$work.popularity]
+    $periodID = $allNodesTable[$work.period]
+    $genreID = $allNodesTable[$work.genre]
+    $popularID = $allNodesTable[$work.popularity]
     $edges.Add("$workID $keyID")
     $edges.Add("$workID $composerID")
     $edges.Add("$workID $periodID")
@@ -53,15 +56,42 @@ foreach($work in $keyWorks){
 
 $file = "$PSScriptRoot\works.net"
 $lines = [System.Collections.ArrayList]@()
-$lines.Add("*Vertices $($allNodes.Count + $worksTable.Count)")
-$allNodes.GetEnumerator() | Sort-Object Value | ForEach-Object {
-    $str = "$($_.Value) `"$($_.Name)`""
+$lines.Add("*Vertices $($allNodesTable.Count + $worksTable.Count)")
+$sorted = $allNodesTable.GetEnumerator() | Sort-Object Value
+$current = 0
+for($i = 0; $i -lt $composers.Count; $i++){
+    $str = "$($sorted[$current].Value)!$($sorted[$current].Name)!Composer"
     $lines.Add($str)
+    $current++
 }
+for($i = 0; $i -lt $period.Count; $i++){
+    $str = "$($sorted[$current].Value)!$($sorted[$current].Name)!Period"
+    $lines.Add($str)
+    $current++
+}
+for($i = 0; $i -lt $popularity.Count; $i++){
+    $str = "$($sorted[$current].Value)!$($sorted[$current].Name)!Popularity"
+    $lines.Add($str)
+    $current++
+}
+for($i = 0; $i -lt $genres.Count; $i++){
+    $str = "$($sorted[$current].Value)!$($sorted[$current].Name)!Genre"
+    $lines.Add($str)
+    $current++
+}
+for($i = 0; $i -lt $keys.Count; $i++){
+    $str = "$($sorted[$current].Value)!$($sorted[$current].Name)!Key"
+    $lines.Add($str)
+    $current++
+}
+#$allNodes.GetEnumerator() | Sort-Object Value | ForEach-Object {
+#    $str = "$($_.Value) `"$($_.Name)`""
+#    $lines.Add($str)
+#}
 $worksTable.GetEnumerator() | Sort-Object Value | ForEach-Object {
-    $str = "$($_.Value) `"$(($_.Name.split("|"))[0])`""
+    $str = "$($_.Value)!$(($_.Name.split("|"))[0])!Work"
     $lines.Add($str)
 }
-$lines.Add("*arcs")
+$lines.Add("*Edges $($edges.Count)")
 $lines = $lines + $edges
-$lines | Out-File -FilePath $file -Encoding utf8 -Force
+Out-File -FilePath $file -InputObject $lines -Encoding utf8 -Force
