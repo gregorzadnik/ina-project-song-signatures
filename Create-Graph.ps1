@@ -1,7 +1,12 @@
 ﻿$data = Invoke-RestMethod -Uri "https://api.openopus.org/work/dump.json" -Method Get
 $keyWorks = [System.Collections.ArrayList]@()
 $keysStr = "D flat major|D minor|E flat major|C minor|A minor|A major|G flat major|B flat major|C major|F major|G minor|D major|G major|E minor|E major|B minor|F minor|F sharp minor|C sharp major|A flat major|C sharp minor|E flat minor|B flat minor|B major|F sharp major|A flat minor|G sharp minor"
-$keys = $keysStr.Split("|")
+$keys = [System.Collections.ArrayList]$keysStr.Split("|")
+$keyMappings = @{
+    'C sharp major' = 'D flat major'
+    'A flat minor' = 'G sharp minor'
+    'G flat major' = 'F sharp major'
+}
 foreach($comp in $data.composers){
     foreach($work in $comp.works){
         foreach($key in $keys){
@@ -9,7 +14,11 @@ foreach($comp in $data.composers){
                 if($keyWorks.title -contains $work.title -and $keyWorks.composer -contains $comp.complete_name){
                     break
                 }
-                $work | Add-Member -MemberType NoteProperty -Name 'key' -Value $key -Force
+                $fixedKey = $key
+                if($keyMappings.ContainsKey($fixedKey)){
+                    $fixedKey = $keyMappings[$fixedKey]
+                }
+                $work | Add-Member -MemberType NoteProperty -Name 'key' -Value $fixedKey -Force
                 $work | Add-Member -MemberType NoteProperty -Name 'composer' -Value $comp.complete_name -Force
                 $work | Add-Member -MemberType NoteProperty -Name 'period' -Value $comp.epoch -Force
                 $popularity = "Popular"
@@ -23,6 +32,9 @@ foreach($comp in $data.composers){
             }    
         }
     }
+}
+foreach($k in $keyMappings.Keys){
+    $keys.Remove($k)
 }
 
 $composers = $data.composers.complete_name
